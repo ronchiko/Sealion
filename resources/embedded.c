@@ -1,8 +1,10 @@
 
-const char DEFAULT_VERTEX_SHADER_SOURCE[] = {
+#define DLL_EXPORT __declspec(dllexport)
+
+DLL_EXPORT const char DEFAULT_VERTEX_SHADER_SOURCE[] = {
 	#include "objs/precompiled/shaders/vertex.glsl.c"
 };
 
-const char DEFAULT_FRAGMENT_SHADER_SOURCE[] = {
+DLL_EXPORT const char DEFAULT_FRAGMENT_SHADER_SOURCE[] = {
 	#include "objs/precompiled/shaders/fragment.glsl.c"
 };

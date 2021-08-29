@@ -3,11 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DLL_EXPORT __declspec(dllexport)
+
 #include <GL/glew.h>
 
 #include "Sealion/graphics.h"
 
-Seal_GL_Shader Seal_ShaderFromSource(const char* _name, 
+DLL_EXPORT Seal_GL_Shader Seal_ShaderFromSource(const char* _name, 
 							const char *_source, 
 							GLenum _shader_type) {
 	
@@ -38,7 +40,7 @@ Seal_GL_Shader Seal_ShaderFromSource(const char* _name,
 	return shader;
 }
 
-Seal_GL_Program Seal_MakeProgram(const char *_name,
+DLL_EXPORT Seal_GL_Program Seal_MakeProgram(const char *_name,
 					   Seal_GL_Shader _vertex, 
 					   Seal_GL_Shader _fragment) {
 

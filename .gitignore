@@ -1,7 +1,21 @@
+# Dynamic libs
 *.dll
+*.so
+# Executables
 *.exe
+*.out
+*.elf
+# Static libaries
+*.a
+*.lib
+# temporary object files
+*.o
+*.obj
 
+#
 .vscode/*
 objs/*
-
 *.stackdump
+
+# Builds
+Sealion.*

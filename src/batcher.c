@@ -5,6 +5,8 @@
 
 #include "Sealion/graphics.h"
 
+#define DLL_EXPORT __declspec(dllexport)
+
 #define BATCHER_DEFAULT_SIZE 1024
 
 #define SPRITE_TOP	 	(_sprite->position.y - _sprite->scale.x * 0.5f)
