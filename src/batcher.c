@@ -1,8 +1,10 @@
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <GL/glew.h>
 
+#include "Sealion/matrix.h"
 #include "Sealion/graphics.h"
 
 #define DLL_EXPORT __declspec(dllexport)
@@ -20,7 +22,16 @@
 #define GL_SAFE(op) {op; GLenum error = glGetError(); if(error != GL_NO_ERROR) \
 	{ printf("ERROR at "#op": %s\n", gluErrorString(error)); exit(-1); } } 
 
-Seal_Batcher *Seal_NewBatcher(void) {
+void Seal_GL_BindMatrix3x3(Seal_GL_Buffer vbo, int position, size_t offset) {
+	for(int i = 0; i < 3; i++) {
+		GL_SAFE(glEnableVertexArrayAttrib(vbo, position + i));
+		GL_SAFE(glVertexAttribPointer(position + i, 3, GL_FLOAT, 
+			GL_FALSE, sizeof(Seal_Rendering_Vertex), 
+			(const void*)(offset + 3 * i * sizeof(float))));
+	}
+}
+
+Seal_Batcher *Seal_NewBatcher(Seal_GL_Program program) {
 	Seal_Batcher *batcher = malloc(sizeof(Seal_Batcher));
 
 	batcher->max_vertecies = BATCHER_DEFAULT_SIZE;
@@ -38,8 +49,12 @@ Seal_Batcher *Seal_NewBatcher(void) {
 	GL_SAFE(glEnableVertexArrayAttrib(batcher->vertex_buffer, 0));
 	GL_SAFE(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Seal_Rendering_Vertex), (const void*)offsetof(Seal_Rendering_Vertex, position)));
 
-	GL_SAFE(glEnableVertexArrayAttrib(batcher->vertex_buffer, 2));
-	GL_SAFE(glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(Seal_Rendering_Vertex), (const void*)offsetof(Seal_Rendering_Vertex, tint)));
+	GL_SAFE(glEnableVertexArrayAttrib(batcher->vertex_buffer, 1));
+	GL_SAFE(glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Seal_Rendering_Vertex), (const void*)offsetof(Seal_Rendering_Vertex, tint)));
+	
+	GLuint transfrom_offset;
+	GL_SAFE(transfrom_offset = glGetAttribLocation(program, "transform"));
+	Seal_GL_BindMatrix3x3(batcher->vertex_buffer, transfrom_offset, offsetof(Seal_Rendering_Vertex, transform));
 
 	GL_SAFE(glGenBuffers(1, &batcher->index_buffer));
 	unsigned int indecies[BATCHER_DEFAULT_SIZE * 6];
@@ -61,6 +76,10 @@ Seal_Batcher *Seal_NewBatcher(void) {
 	return batcher;
 }
 
+void Seal_BatchPushVertex(Seal_Batcher *_batcher, Seal_Rendering_Vertex *vertex){
+	_batcher->vertecies[_batcher->used_vertecies++] = *vertex;
+}
+
 void Seal_BatchPush(Seal_Batcher *_batcher, Seal_Sprite *_sprite) {
 	
 	if(_batcher->used_vertecies + 4 >= _batcher->max_vertecies) return; // Can't push
@@ -71,17 +90,30 @@ void Seal_BatchPush(Seal_Batcher *_batcher, Seal_Sprite *_sprite) {
 	float top 		= (float)_Y_TRANSLATE(SPRITE_TOP);
 	float bottom 	= (float)_Y_TRANSLATE(SPRITE_BOTTOM);
 
-	float ratio = ((float)WINDOW_SIZE->x) / WINDOW_SIZE->y;
-	float inv_r = 1.f / ratio;
+	Seal_Matrix3x3 matrix;
+	Seal_M3Transform(matrix, _sprite->position, _sprite->scale, _sprite->angle);
+	Seal_M3Transpose(matrix);		// OpenGL asks for a transposed matrix
 
-	_batcher->vertecies[_batcher->used_vertecies++] = 
-		(Seal_Rendering_Vertex){ {left , top   }, {0, 1}, _sprite->texture, _sprite->color };
-	_batcher->vertecies[_batcher->used_vertecies++] = 
-		(Seal_Rendering_Vertex){ {left , bottom}, {0, 0}, _sprite->texture, _sprite->color };
-	_batcher->vertecies[_batcher->used_vertecies++] = 
-		(Seal_Rendering_Vertex){ {right, bottom}, {1, 0}, _sprite->texture, _sprite->color };
-	_batcher->vertecies[_batcher->used_vertecies++] = 
-		(Seal_Rendering_Vertex){ {right, top   }, {1, 1}, _sprite->texture, _sprite->color };
+	Seal_Rendering_Vertex vertex;
+	vertex.texture = _sprite->texture;
+	vertex.tint = _sprite->color;
+	memcpy(vertex.transform, matrix, sizeof(Seal_Matrix3x3));
+
+	vertex.position.x = -.5f; vertex.position.y = -.5f;
+	vertex.uv.x = 0; vertex.uv.y = 1;
+	Seal_BatchPushVertex(_batcher, &vertex);
+
+	vertex.position.x = -.5f; vertex.position.y = 0.5f;
+	vertex.uv.x = 0; vertex.uv.y = 0;
+	Seal_BatchPushVertex(_batcher, &vertex);
+
+	vertex.position.x = 0.5f; vertex.position.y = 0.5f;
+	vertex.uv.x = 1; vertex.uv.y = 0;
+	Seal_BatchPushVertex(_batcher, &vertex);
+	
+	vertex.position.x = 0.5f; vertex.position.y = -.5f;
+	vertex.uv.x = 1; vertex.uv.y = 1;
+	Seal_BatchPushVertex(_batcher, &vertex);
 
 	_batcher->indecies += 6;
 }

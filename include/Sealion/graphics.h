@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Sealion/vector2.h"
+#include "Sealion/matrix.h"
 #include "Sealion/color.h"
 
 #include <stddef.h>
@@ -26,6 +26,7 @@ Seal_GL_Program Seal_MakeProgram(const char *name, Seal_GL_Shader Seal_Rendering
 
 typedef struct {
 	Seal_Vec2 position;
+	Seal_Matrix3x3 transform;
 	Seal_Vec2 uv;
 	int texture;
 	Seal_Color tint;
@@ -43,8 +44,9 @@ typedef struct {
 	size_t used_vertecies;
 } Seal_Batcher;
 
-Seal_Batcher *Seal_NewBatcher(void);
+Seal_Batcher *Seal_NewBatcher(Seal_GL_Program program);
 void Seal_BatchPush(Seal_Batcher *batcher, Seal_Sprite *Seal_Sprite);
+void Seal_BatchPushVertex(Seal_Batcher *batcher, Seal_Rendering_Vertex *vertex);
 /* Draw the batch*/
 void Seal_DrawBatch(Seal_Batcher *batcher);
 /* Destroy the buffer completly */

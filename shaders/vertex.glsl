@@ -1,16 +1,16 @@
 #version 450
 
 in vec2 position;
-in vec2 scale;
 in vec4 _color;
+in mat3 transform;
 
-uniform mat2 _translation;
+uniform mat3 _translation;
 
 out vec4 color;
 
 void main() {
 
-	vec2 offset = _translation * (position.xy + scale.xy);
+	vec3 offset = _translation * transform * vec3(position.xy, 1.0);
 
 	gl_Position = vec4(offset.xy, 0.0, 1.0);
 

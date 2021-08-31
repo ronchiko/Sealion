@@ -17,6 +17,8 @@
 #define WIDTH 600
 #define HEIGHT 400
 
+extern void _Seal_DrawMatrix(float *matrix, int w, int h);
+
 struct _packed_pipeline_data_ {
 	Seal_GL_Program program;
 	Seal_Batcher *batcher;
@@ -25,66 +27,63 @@ struct _packed_pipeline_data_ {
 
 void _Basic_Pipeline(Seal_ContextData *ctx, void *raw_data) {
 	
+	static float xspeed = 0.2f, yspeed = 0.2f, camerax = 0.f;
+
 	GL_SAFE(glClear(GL_COLOR_BUFFER_BIT));
 	struct _packed_pipeline_data_ *data = raw_data;
 	
 	glUseProgram(data->program);
 
+	static Seal_Camera camera = {
+		{0, 0}, 2.f, 1.f, 100.f
+	};
+	float ratio = (float)ctx->size.x / ctx->size.y;
+
+	Seal_Matrix3x3 screen;
+	Seal_M3Camera(screen, &camera, ratio);
+	Seal_M3Transpose(screen);
+
 	GLuint _half = glGetUniformLocation(data->program, "_translation");
-	glUniformMatrix2fv(_half, 1, GL_FALSE, ctx->matrix);
+	glUniformMatrix3fv(_half, 1, GL_FALSE, screen);
 	
 	Seal_BatchPush(data->batcher, &data->sprite1);
-	Seal_BatchPush(data->batcher, &data->sprite2);
 
 	Seal_DrawBatch(data->batcher);
 }
 
 int main() {
+	Seal_Context *ctx = Seal_NewContext("Dodger", WIDTH, HEIGHT);
 
-	Seal_RenderPipeline pipelines[2] = { 0 };
-	for(int i = 0; i < 2; ++i) {
-		Seal_Context *ctx = Seal_NewContext("Dodger", WIDTH, HEIGHT);
+	// OpenGL initialize, TODO: Should be moved to a function
+	Seal_GL_Shader vertex = Seal_ShaderFromSource("VERTEX_DEFAULT", DEFAULT_VERTEX_SHADER_SOURCE, GL_VERTEX_SHADER);
+	Seal_GL_Shader fragment = Seal_ShaderFromSource("FRAGMENT_DEFAULT", DEFAULT_FRAGMENT_SHADER_SOURCE, GL_FRAGMENT_SHADER);
 
-		// OpenGL initialize, TODO: Should be moved to a function
-		Seal_GL_Shader vertex = Seal_ShaderFromSource("VERTEX_DEFAULT", DEFAULT_VERTEX_SHADER_SOURCE, GL_VERTEX_SHADER);
-		Seal_GL_Shader fragment = Seal_ShaderFromSource("FRAGMENT_DEFAULT", DEFAULT_FRAGMENT_SHADER_SOURCE, GL_FRAGMENT_SHADER);
+	Seal_GL_Program program = 0;
+	if(vertex && fragment)
+		program = Seal_MakeProgram("DEFAULT", vertex, fragment);
+	
 
-		Seal_GL_Program program = 0;
-		if(vertex && fragment)
-			program = Seal_MakeProgram("DEFAULT", vertex, fragment);
-		
+	glClearColor(0, 0, 0, 1);
+	glViewport(0, 0, WIDTH, HEIGHT);
 
-		glClearColor(0, 0, 0, 1);
-		glViewport(0, 0, WIDTH, HEIGHT);
+	Seal_Batcher *batcher = Seal_NewBatcher(program);
+	Seal_Sprite sprite1 = { {10.f, 0.f }, { 10.f, 10.f }, 0, 0, { 1.f, 0, 0, 1 }}; 
+	Seal_Sprite sprite2 = { {0, 1 }, { 50, 50 }, 0, 0, { 0, 1.f, 1, 1 }}; 
 
-		Seal_Batcher *batcher = Seal_NewBatcher();
-		Seal_Sprite sprite1 = { {0, 0 }, { 100, 100 }, 0, 0, { 1.f, 0, 0, 1 }}; 
-		Seal_Sprite sprite2 = { {0, 1 }, { 50, 50 }, 0, 0, { 0, 1.f, 1, 1 }}; 
+	struct _packed_pipeline_data_ pipeline_data;
+	pipeline_data.program = program;
+	pipeline_data.batcher = batcher;
+	pipeline_data.sprite1 = sprite1;
+	pipeline_data.sprite2 = sprite2;
 
-		struct _packed_pipeline_data_ *pipeline_data = malloc(sizeof(struct _packed_pipeline_data_));
-		pipeline_data->program = program;
-		pipeline_data->batcher = batcher;
-		pipeline_data->sprite1 = sprite1;
-		pipeline_data->sprite2 = sprite2;
+	Seal_RenderPipeline pipeline = {
+		ctx, &_Basic_Pipeline, &pipeline_data
+	};
 
-		Seal_RenderPipeline pipeline = {
-			ctx, &_Basic_Pipeline, pipeline_data
-		};
+	Seal_BeginPipeline(pipeline);
 
-		memcpy(pipelines + i, &pipeline, sizeof(Seal_RenderPipeline));  
-	}
-
-	Seal_BeginPipelines(pipelines, 2);
-
-	for(int i = 0; i < 2; i++) {
-
-		struct _packed_pipeline_data_ *data = pipelines[i].data;
-
-		Seal_DestroyBatcher(data->batcher);
-		Seal_DestroyContext(pipelines[i].context);
-		free(data);
-	}
-
+	Seal_DestroyBatcher(batcher);
+	Seal_DestroyContext(pipeline.context);
 
 	return 0;
 }

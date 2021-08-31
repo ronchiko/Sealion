@@ -17,3 +17,11 @@ inline float Seal_FastInverseSqrt(float n) {
 
 	return conversion.f;
 }
+
+inline int Seal_Min(int x, int y) {
+	return x > y ? y : x;
+}
+
+inline int Seal_Max(int x, int y) {
+	return x > y ? x : y;
+}

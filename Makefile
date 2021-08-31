@@ -34,7 +34,7 @@ game: $(GAME)
 $(LIB): build-shaders $(OBJS)
 	mkdir objs/.dllbuild
 
-	$(CC) -shared -D_WIN32 -I include -I C:/Dev/include -o $(LIB).dll \
+	$(CC) -shared -fpic -D_WIN32 -I include -I C:/Dev/include -o $(LIB).dll \
 		-Wl,--out-implib,lib$(LIB).lib \
 		-Wl,--export-all-symbols \
 		-Wl,--enable-auto-import \
